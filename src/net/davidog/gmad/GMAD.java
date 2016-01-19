@@ -10,9 +10,9 @@ public class GMAD {
 
     private static File garrysFolder;
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void main(String[] args) {
 	    Runtime runtime = Runtime.getRuntime();
-        String userprofile = System.getenv("USERPROFILE");
 
         if(args[0] != null) {
             File arg = new File(args[0]);
@@ -21,7 +21,7 @@ public class GMAD {
                 garrysFolder = arg.getParentFile();
 
                 //Descompresión de los .gma
-                List<File> files = Arrays.asList(arg.listFiles(f -> f.isFile()));
+                List<File> files = Arrays.asList(arg.listFiles(File::isFile));
                 files.removeIf(t -> (new File(t.getName().substring(0, t.getName().indexOf(".")))).exists() || !t.getName().endsWith(".gma"));
                 files.forEach(t -> {
                     try {
@@ -32,9 +32,9 @@ public class GMAD {
                 });
 
                 //Mover carpetas
-                List<File> folders = Arrays.asList(arg.listFiles(f -> f.isDirectory())); //folders = ds_XXXXXX
+                List<File> folders = Arrays.asList(arg.listFiles(File::isDirectory)); //folders = ds_XXXXXX
                 ArrayList<File> archivosAMover = new ArrayList<>(); //archivosAMover = Cosas dentro de maps y gamemode
-                folders.forEach(t -> Arrays.asList(t.listFiles(f -> f.isDirectory())).forEach(r -> archivosAMover.addAll(Arrays.asList(r.listFiles(GMAD::isNotInGarrysFolder)))));
+                folders.forEach(t -> Arrays.asList(t.listFiles(File::isDirectory)).forEach(r -> archivosAMover.addAll(Arrays.asList(r.listFiles(GMAD::isNotInGarrysFolder)))));
 
                 String s = File.separator;
                 archivosAMover.forEach(f -> {
@@ -51,9 +51,12 @@ public class GMAD {
                     }
                 });
             }
+        } else {
+            System.out.println("Especifica la carpeta donde estan los .gma");
         }
     }
 
+    @SuppressWarnings("ConstantConditions")
     public static boolean isNotInGarrysFolder(File file) {
         String name = file.getName();
         ArrayList<File> yaDescomprimido = new ArrayList<>();
