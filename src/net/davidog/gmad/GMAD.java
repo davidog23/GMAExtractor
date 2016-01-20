@@ -6,7 +6,7 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
-public class GMAD {
+public class GMAD { //Some barch testing.
 
     private static File garrysFolder;
 
