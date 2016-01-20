@@ -6,6 +6,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
+
+//https://github.com/garrynewman/gmad
 public class GMAD {
 
     private static File garrysFolder;
