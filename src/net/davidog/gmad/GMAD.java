@@ -6,26 +6,30 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
-public class GMAD { //Some barch testing.
 
-    private static File garrysFolder;
+//https://github.com/garrynewman/gmad
+public class GMAD {
+
+    //Debería usarla?
+    private static List<String> allowedFoldersToChange = Arrays.asList("gamemodes", "maps", "lua", "materials", "models", "sound");
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 	    Runtime runtime = Runtime.getRuntime();
+        Path garrysGMAD = Paths.get("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\bin\\gmad.exe");
 
         if(args[0] != null) {
             File arg = new File(args[0]);
 
             if (arg.isDirectory()) {
-                garrysFolder = arg.getParentFile();
+                File garrysFolder = arg.getParentFile();
 
                 //Descompresión de los .gma
                 List<File> files = Arrays.asList(arg.listFiles(File::isFile));
-                files.removeIf(t -> (new File(t.getName().substring(0, t.getName().indexOf(".")))).exists() || !t.getName().endsWith(".gma"));
+                files.removeIf(t -> !t.getName().endsWith(".gma"));
                 files.forEach(t -> {
                     try {
-                        runtime.exec("C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\bin\\gmad.exe " + t.getAbsolutePath());
+                        runtime.exec(garrysGMAD.toString() + " " + t.getAbsolutePath());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -33,72 +37,47 @@ public class GMAD { //Some barch testing.
 
                 //Mover carpetas
                 List<File> folders = Arrays.asList(arg.listFiles(File::isDirectory)); //folders = ds_XXXXXX
-                ArrayList<File> archivosAMover = new ArrayList<>(); //archivosAMover = Cosas dentro de maps y gamemode
-                folders.forEach(t -> Arrays.asList(t.listFiles(File::isDirectory)).forEach(r -> archivosAMover.addAll(Arrays.asList(r.listFiles(GMAD::isNotInGarrysFolder)))));
+                for(File f : folders) {
+                    move(f, garrysFolder);
+                }
 
-                String s = File.separator;
-                archivosAMover.forEach(f -> {
-                    try {
-                        File target = new File(garrysFolder.getAbsolutePath() + s + f.getParentFile().getName() + s + f.getName());
-                        if(!target.getParentFile().exists()) { target.getParentFile().mkdir(); }
-                        if(f.isFile()) {
-                            Files.copy(f.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        } else {
-                            copyDir(f, target);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
             }
         } else {
             System.out.println("Especifica la carpeta donde estan los .gma");
         }
     }
 
-    @SuppressWarnings("ConstantConditions")
-    public static boolean isNotInGarrysFolder(File file) {
-        String name = file.getName();
-        ArrayList<File> yaDescomprimido = new ArrayList<>();
-        Arrays.asList(garrysFolder.listFiles(f -> f.getName().equals("gamemodes") || f.getName().equals("maps"))).forEach(f -> yaDescomprimido.addAll(Arrays.asList(f.listFiles())));
+    public static void move(File addonsFolder, File garrysFolder) throws IOException {
 
-        boolean control = true;
-        int n = yaDescomprimido.size();
-        for (int i = 0; i < n && control; i++) {
-            if(name.equals(yaDescomprimido.get(i).getName())){
-                control = false;
+        Path addonsFolderPath = addonsFolder.toPath();
+        Path garrysFolderPath = garrysFolder.toPath();
+
+        Files.walkFileTree(addonsFolderPath, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, new SimpleFileVisitor<Path>(){
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                Path target = garrysFolderPath.resolve(addonsFolderPath.relativize(dir));
+                if(Files.notExists(target)) {
+                    Files.copy(dir, target);
+                    return FileVisitResult.SKIP_SUBTREE;
+                } else {
+                    return FileVisitResult.CONTINUE;
+                }
             }
-        }
-        return control;
-    }
 
-    //Sacado de los javadocs de la api...
-    public static void copyDir(File sourceFolder, File targetFolder) throws IOException {
-        Path source = sourceFolder.toPath();
-        Path target = targetFolder.toPath();
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Path target = garrysFolderPath.resolve(addonsFolderPath.relativize(file));
+                if(Files.notExists(target)) {
+                    Files.copy(file, target);
+                }
+                return FileVisitResult.CONTINUE;
+            }
 
-        Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE,
-                new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                            throws IOException
-                    {
-                        Path targetdir = target.resolve(source.relativize(dir));
-                        try {
-                            Files.copy(dir, targetdir);
-                        } catch (FileAlreadyExistsException e) {
-                            if (!Files.isDirectory(targetdir))
-                                throw e;
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                            throws IOException
-                    {
-                        Files.copy(file, target.resolve(source.relativize(file)));
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
+//            @Override
+//            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+//                Files.delete(dir);
+//                return FileVisitResult.CONTINUE;
+//            }
+        });
     }
 }
